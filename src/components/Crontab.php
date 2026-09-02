@@ -19,6 +19,8 @@ class Crontab extends Component
      */
     public function readLines(): array
     {
+        $this->assertExecAvailable();
+
         $output = [];
         $exitCode = 0;
         exec('crontab -l 2>/dev/null', $output, $exitCode);
@@ -33,6 +35,8 @@ class Crontab extends Component
      */
     public function writeLines(array $lines): void
     {
+        $this->assertExecAvailable();
+
         $tmpFile = tempnam(sys_get_temp_dir(), 'cron');
         file_put_contents($tmpFile, $lines === [] ? '' : implode("\n", $lines) . "\n");
 
@@ -43,6 +47,25 @@ class Crontab extends Component
 
         if ($exitCode !== 0) {
             throw new RuntimeException('Failed to write crontab: ' . implode("\n", $output));
+        }
+    }
+
+    /**
+     * Shared hosts routinely add `exec` to `disable_functions` for the web SAPI (while leaving
+     * it enabled for CLI). Calling a disabled function raises a bare `Error`, not an `Exception`,
+     * so callers such as the web status page never get a chance to degrade -- turn it into the
+     * `RuntimeException` the rest of the package already handles.
+     *
+     * @throws RuntimeException when `exec()` cannot be invoked in the current environment
+     */
+    protected function assertExecAvailable(): void
+    {
+        if (!function_exists('exec')) {
+            throw new RuntimeException(
+                'Cannot invoke the crontab binary: the exec() function is disabled in this '
+                . 'environment (typically the web SAPI on shared hosting -- run the cron/manage '
+                . 'commands from the CLI instead).'
+            );
         }
     }
 
