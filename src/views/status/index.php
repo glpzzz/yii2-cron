@@ -12,6 +12,7 @@ use glpzzz\cron\models\CronEntry;
 use yii\helpers\Html;
 
 $this->title = 'Cron Jobs';
+$this->params['breadcrumbs'][] = $this->title;
 
 /** @var array<string,string> $statusByRoute route => badge label */
 $statusByRoute = [];
@@ -35,9 +36,13 @@ $unscheduled = $report !== null
     ? $report->unscheduled
     : array_values(array_filter($declared, static fn (CronEntry $e): bool => !$e->isScheduled()));
 ?>
+<style>
+    .cron-status { padding: .5rem .75rem 1rem; }
+    .cron-status h2 { margin-top: 2rem; }
+    .cron-status h2:first-of-type { margin-top: 1rem; }
+    .cron-status > p { color: #6c757d; }
+</style>
 <div class="cron-status">
-    <h1><?= Html::encode($this->title) ?></h1>
-
     <?php if ($error !== null): ?>
         <div class="alert alert-warning">
             The installed-state comparison is unavailable here (<?= Html::encode($error) ?>).
