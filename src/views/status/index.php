@@ -12,6 +12,7 @@ use glpzzz\cron\models\CronEntry;
 use yii\helpers\Html;
 
 $this->title = 'Cron Jobs';
+$this->params['breadcrumbs'][] = $this->title;
 
 /** @var array<string,string> $statusByRoute route => badge label */
 $statusByRoute = [];
