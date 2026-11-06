@@ -6,6 +6,7 @@ namespace glpzzz\cron\tests\Functional;
 
 use glpzzz\cron\controllers\ManageController;
 use glpzzz\cron\models\CronEntry;
+use glpzzz\cron\Module;
 use glpzzz\cron\testing\FakeCronScanner;
 use glpzzz\cron\testing\FakeCrontab;
 use glpzzz\cron\tests\TestCase;
@@ -108,6 +109,43 @@ final class ManageControllerTest extends TestCase
         self::assertSame([self::UNRELATED_LINE], $this->crontab()->readLines());
     }
 
+    public function testInstallRefusesWhenInstallIsDisabled(): void
+    {
+        $this->disableInstall();
+
+        self::assertSame(ExitCode::CONFIG, $this->controller()->runAction('install', ['test-a/run']));
+        self::assertCount(0, $this->crontab()->readLines());
+    }
+
+    public function testInstallAllRemovesOurLinesWhenInstallIsDisabled(): void
+    {
+        $this->crontab()->writeLines([self::UNRELATED_LINE]);
+        $this->controller()->runAction('install-all');
+        $this->disableInstall();
+
+        self::assertSame(ExitCode::OK, $this->controller()->runAction('install-all'));
+        self::assertSame([self::UNRELATED_LINE], $this->crontab()->readLines());
+    }
+
+    public function testInstallAllForceRemovesOurLinesWhenInstallIsDisabled(): void
+    {
+        $this->crontab()->writeLines([self::UNRELATED_LINE]);
+        $this->controller()->runAction('install-all');
+        $this->disableInstall();
+
+        $controller = $this->controller();
+        $controller->force = true;
+        self::assertSame(ExitCode::OK, $controller->runAction('install-all'));
+        self::assertSame([self::UNRELATED_LINE], $this->crontab()->readLines());
+    }
+
+    public function testInstallIsEnabledByDefault(): void
+    {
+        $module = Yii::$app->getModule('cron');
+        assert($module instanceof Module);
+        self::assertTrue($module->install);
+    }
+
     public function testListAllRendersEveryDiscoveredEntry(): void
     {
         ob_start();
@@ -128,6 +166,13 @@ final class ManageControllerTest extends TestCase
             new CronEntry('test-a', 'run', [], self::SCHEDULE_A, 'entry A'),
             new CronEntry('test-b', 'run', ['x'], self::SCHEDULE_B, 'entry B'),
         ];
+    }
+
+    private function disableInstall(): void
+    {
+        $module = Yii::$app->getModule('cron');
+        assert($module instanceof Module);
+        $module->install = false;
     }
 
     private function appPath(): string

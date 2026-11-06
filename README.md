@@ -69,6 +69,24 @@ yii cron/manage/remove-all
 `<route>` is given without the module prefix, e.g. `users/notify-for-insurance`.
 Run `install-all --force --interactive=0` on deploy, after migrations.
 
+### Disabling installation per environment
+
+Set the module's `install` option to `false` where the crons must not run -- typically a
+dev/staging server that shares the production deploy script:
+
+```php
+'cron' => [
+    'class' => \glpzzz\cron\Module::class,
+    'install' => YII_ENV_PROD, // or a param, e.g. $params['install-crons']
+    // ...
+],
+```
+
+With `install => false`, `install` refuses (exit 78, `ExitCode::CONFIG`) and `install-all`
+(with or without `--force`) **removes** every line installed for this app instead, so the
+same deploy step converges the crontab to "no crons". `list`, `remove`, `remove-all` and the
+status page behave as usual. Defaults to `true`.
+
 ## Web status page
 
 `<module-mount>/status` (e.g. `/admin/cron/status`) lists the discovered crons and, when the

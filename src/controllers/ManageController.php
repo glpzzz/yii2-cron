@@ -8,6 +8,7 @@ use glpzzz\cron\components\CronScanner;
 use glpzzz\cron\components\CronStatus;
 use glpzzz\cron\components\Crontab;
 use glpzzz\cron\models\CronEntry;
+use glpzzz\cron\Module;
 use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
@@ -22,6 +23,8 @@ use yii\helpers\Console;
  */
 class ManageController extends Controller
 {
+    private const INSTALL_DISABLED = 'Cron installation is disabled for this app (cron module `install` = false).';
+
     public $defaultAction = 'list';
 
     public bool $force = false;
@@ -91,6 +94,11 @@ class ManageController extends Controller
      */
     public function actionInstall(string $route, array $params = []): int
     {
+        if (!$this->installEnabled()) {
+            $this->stderr(self::INSTALL_DISABLED . "\n", Console::FG_YELLOW);
+            return ExitCode::CONFIG;
+        }
+
         $entry = $this->findEntry($route, $params);
         if ($entry === null) {
             $this->stderr("No #[Cron]-tagged action matches '{$this->describeRoute($route, $params)}'.\n", Console::FG_RED);
@@ -123,9 +131,17 @@ class ManageController extends Controller
      * Installs every discovered #[Cron] action not already installed as an exact match.
      * With --force, first removes every line installed for this app, then installs all fresh
      * (the reconciliation path for schedule drift, renamed params, etc.).
+     *
+     * When the module's {@see Module::$install} is false, removes every line installed for
+     * this app instead (same as `remove-all`), with or without --force.
      */
     public function actionInstallAll(): int
     {
+        if (!$this->installEnabled()) {
+            $this->stdout(self::INSTALL_DISABLED . " Removing this app's lines instead.\n", Console::FG_YELLOW);
+            return $this->actionRemoveAll();
+        }
+
         $entries = $this->discover();
         $appPath = $this->appPath();
         $prefix = $this->routePrefix();
@@ -260,6 +276,11 @@ class ManageController extends Controller
             'headers' => ['Route', 'Params', 'Schedule'],
             'rows' => $rows,
         ]);
+    }
+
+    private function installEnabled(): bool
+    {
+        return !$this->module instanceof Module || $this->module->install;
     }
 
     private function routePrefix(): string

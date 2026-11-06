@@ -46,6 +46,16 @@ class Module extends BaseModule
 
     public bool $recursiveScan = false;
 
+    /**
+     * Whether `manage/install` / `manage/install-all` may write crontab lines for this app.
+     * Set it false where the crons must not run (e.g. a dev/staging deploy that shares the
+     * production deploy script): `install` then refuses (exit {@see \yii\console\ExitCode::CONFIG}),
+     * and `install-all` removes every line installed for this app instead -- so a deploy that
+     * runs `install-all --force --interactive=0` converges the crontab to "no crons".
+     * `list`, `remove`, `remove-all` and the web `status` page are unaffected.
+     */
+    public bool $install = true;
+
     public $defaultRoute = 'status';
 
     /**
